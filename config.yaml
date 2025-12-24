@@ -1,0 +1,25 @@
+name: "mDNS Republisher"
+description: "Avahi-based service to publish hostnames for flaky Airprint printers, improving service reliability"
+url: "https://github.com/twasilczyk/mdns-republisher-ha"
+version: "0.1.0"
+slug: "mdnsrep"
+init: false
+#image: "ghcr.io/twasilczyk/apcupsd-ha-{arch}"
+#codenotary: codenotary@wasilczyk.pl
+apparmor: true
+# auth_api is not needed, used just to bump rating by 1. We can't use ingress setting, because that
+# one would cause undesired side effects (UI changes to expose web UI, which we don't have).
+auth_api: true
+host_network: true
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+options:
+  hosts: []
+schema:
+  hosts:
+    - hostname: str
+      address: str

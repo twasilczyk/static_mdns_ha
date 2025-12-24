@@ -1,0 +1,4 @@
+configuration:
+  hosts:
+    name: Hosts
+    description: AirPrint devices to have their hostnames re-published.

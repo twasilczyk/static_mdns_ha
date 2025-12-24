@@ -1,0 +1,4 @@
+configuration:
+  hosts:
+    name: Urządzenia
+    description: Urządzenia AirPrint wybrane do re-publikacji ich adresów

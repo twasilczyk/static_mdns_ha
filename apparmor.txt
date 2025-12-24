@@ -1,0 +1,91 @@
+# To debug apparmor denials:
+# ssh root@192.168.1.XYZ -p 22222
+# journalctl -f _TRANSPORT="audit" -g 'apparmor="DENIED"'
+
+#include <tunables/global>
+
+profile mdnsrep flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Capabilities
+  capability kill,
+  signal (send) set=(kill,term,int,hup,cont) peer=*_mdnsrep//*,
+
+  # S6-Overlay
+  /bin/busybox ix,
+  /etc/{s6**,fix-attrs.d/,services.d/} r,
+  /init rix,
+  /package/admin/{s6,execline}** rix,
+  /run/{,service/} rw,
+  /run/{,service/}{,.}s6** krwix,
+
+  # Supervisor API
+  /usr/bin/curl cx -> curl,
+  /usr/bin/jq cx -> jq,
+
+  # Run wrapper within the same context, because double nested contexts are broken on HA Supervisor
+  /sbin/mdns-republisher.sh rix,
+
+  # Programs mdns-republisher.sh use
+  /usr/bin/dbus-daemon cx -> dbus_daemon,
+  /usr/sbin/avahi-daemon cx -> avahi_daemon,
+  /usr/bin/avahi-publish cx -> avahi_publish,
+
+  # Bashio for mdns-republisher.sh
+  /bin/bash rix,
+  /dev/tty rw,
+  /etc/passwd r,
+  /tmp/.bashio** rwk,
+  /usr/lib/bashio/** ix,
+
+  # syslogd for mdns-republisher.sh (I can't make it switch context for some reason)
+  /run/syslogd.pid rw,
+
+  profile curl flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
+    #include <abstractions/nameservice>
+    #include <abstractions/openssl>
+    /usr/bin/curl mr,
+    signal (receive) peer=*mdnsrep,
+  }
+
+  profile jq flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
+    /usr/bin/jq mr,
+    signal (receive) peer=*mdnsrep,
+  }
+
+  profile dbus_daemon flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
+    capability setgid,
+    capability setuid,
+    signal (receive) set=(kill,term,int,hup,cont) peer=*mdnsrep,
+    /usr/bin/dbus-daemon mr,
+    /etc/dbus-1/system.conf r,
+    /etc/{passwd,group} r,
+    /proc/*/cmdline r,
+    /run/dbus/system_bus_socket w,
+    /usr/share/dbus-1/** r,
+  }
+
+  profile avahi_daemon flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
+    #include <abstractions/nameservice>
+    capability chown,
+    capability setgid,
+    capability setuid,
+    signal (receive) set=(kill,term,int,hup,cont) peer=*mdnsrep,
+    /usr/sbin/avahi-daemon mr,
+    /etc/avahi/** r,
+    /etc/{passwd,group} r,
+    /proc/*/fd/ r,
+    /run/avahi-daemon/{,**} rw,
+    /run/avahi-daemon/pid k,
+  }
+
+  profile avahi_publish flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
+    signal (receive) set=(kill,term,int,hup,cont) peer=*mdnsrep,
+    /usr/bin/avahi-publish mr,
+  }
+}
