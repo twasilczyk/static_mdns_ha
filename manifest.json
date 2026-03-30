@@ -1,0 +1,11 @@
+{
+    "domain": "static_mdns",
+    "name": "Static mDNS",
+    "version": "0.2.0",
+    "documentation": "https://github.com/twasilczyk/static_mdns_ha",
+    "requirements": [
+        "zeroconf>=0.148.0"
+    ],
+    "dependencies": ["zeroconf"]
+}
+
